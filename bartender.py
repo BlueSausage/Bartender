@@ -1,7 +1,8 @@
 import time
 import sys
 import json
-import itertools
+import threading
+import RPi.GPIO as GPIO
 
 from drinks import drink_list, drink_options
 from menu import MenuItem
@@ -40,7 +41,7 @@ class Bartender:
 
     def filterDrinks(self):
         """
-                Removes any drinks that can't be handled by the pump configuration
+                Removes any drinks that can't be handled by the current pump configuration
         """
         drinks = []
         for d in drink_list:
@@ -67,6 +68,48 @@ class Bartender:
             if drinks.__getitem__(j).visible is True:
                 print(drinks.__getitem__(j).name)
             j += 1
+
+    def makeDrink(self, ingredients):
+        self.running = True
+        pumpThreads = []
+        for ing in ingredients.keys():
+            for p in self.pump_configuration.keys():
+                if ing == self.pump_configuration[p]['value']:
+                    waitTime = ingredients[ing] * FLOW_RATE
+                    pump_thread = threading.Thread(target=self.pourDrink, args=(self.pump_configuration[p]['pin'], waitTime))
+                    pumpThreads.append(pump_thread)
+
+        #Start the pump threads
+        for threads in pumpThreads:
+            threads.start()
+        #Wait for threads to finish
+        for threads in pumpThreads:
+            threads.join()
+
+        time.sleep(2)
+        self.running = False
+
+    def pourDrink(self, pin, pourTime):
+        GPIO.output(pin, GRIO.LOW)
+        time.sleep(pourTime)
+        GPIO.output(pin, GPIO.HIGH)
+
+    def clean(self):
+        cleanTime = 20
+        pumpThreads = []
+        self.running = True
+        for p in self.pump_configuration.keys():
+            pump_thread = threading.Thread(target=self.pourDrink, args=(self.pump_configuration[p]['pin'], cleanTime))
+            pumpThreads.append(pump_thread)
+
+        for threads in pumpThreads:
+            threads.start()
+
+        for threads in pumpThreads:
+            threads.join()
+
+        time.sleep(2)
+        self.running = False
 
 
 if __name__ == '__main__':
