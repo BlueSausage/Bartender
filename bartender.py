@@ -63,12 +63,6 @@ class Bartender:
             k = 0
             n += 1
 
-        j = 0
-        while j < len(drinks):
-            if drinks.__getitem__(j).visible is True:
-                print(drinks.__getitem__(j).name)
-            j += 1
-
     def makeDrink(self, ingredients):
         self.running = True
         pumpThreads = []
