@@ -99,8 +99,9 @@ class Bartender:
         pumpThreads = []
         self.running = True
         for p in self.pump_configuration.keys():
-            pump_thread = threading.Thread(target=self.pourDrink, args=(self.pump_configuration[p]['pin'], cleanTime))
-            pumpThreads.append(pump_thread)
+            if self.pump_configuration[p]['value'] is not None:
+                pump_thread = threading.Thread(target=self.pourDrink, args=(self.pump_configuration[p]['pin'], cleanTime))
+                pumpThreads.append(pump_thread)
 
         for threads in pumpThreads:
             threads.start()
