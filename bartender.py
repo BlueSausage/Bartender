@@ -5,18 +5,18 @@ import threading
 import RPi.GPIO as GPIO
 
 from drinks import drink_list, drink_options
-from menu import MenuItem
+from menuItem import MenuItem
+
+GPIO.setmode(GPIO.BCM)
 
 FLOW_RATE = 60./100.0
 
-
 class Bartender:
     def __init__(self):
-        self.running = False
-
-
         # load the pump configuration from file
         self.pump_configuration = Bartender.readPumpConfiguration()
+        for pump in self.pump_configuration.keys():
+            GPIO.setup(self.pump_configuration[pump]["pin"], GPIO.OUT, initial=GPIO.HIGH)
 
     @staticmethod
     def readPumpConfiguration():
@@ -26,11 +26,6 @@ class Bartender:
     def writePumpConfiguration(configuration):
         with open('pump_config.json', 'w') as jsonFile:
             json.dump(configuration, jsonFile)
-
-
-    def showPumpConfiguration(self):
-        for p in sorted(self.pump_configuration.keys()):
-            print(self.pump_configuration[p]['name'], self.pump_configuration[p]['value'])
 
     def changePumpConfiguration(self, name, newValue):
         for p in sorted(self.pump_configuration.keys()):
@@ -45,26 +40,27 @@ class Bartender:
         """
         drinks = []
         for d in drink_list:
-            drinks.append(MenuItem(d['name'], d['ingredients'].keys(), False))
+            drinks.append(MenuItem(d['name'], d['ingredients'], False))
 
         n = 0
         k = 0
         ingredients = 0
         while n < len(drinks):
-            while k < len(list(drinks.__getitem__(n).attributes)):
+            while k < len(list(drinks.__getitem__(n).ingredients)):
                 for p in sorted(self.pump_configuration):
                     if self.pump_configuration[p]['value'] is not None:
-                        if list(drinks.__getitem__(n).attributes).__getitem__(k) == self.pump_configuration[p]['value']:
+                        if list(drinks.__getitem__(n).ingredients).__getitem__(k) == self.pump_configuration[p]['value']:
                             ingredients += 1
                 k += 1
-            if len(list(drinks.__getitem__(n).attributes)) == ingredients:
+            if len(list(drinks.__getitem__(n).ingredients)) == ingredients:
                 drinks.__getitem__(n).visible = True
             ingredients = 0
             k = 0
             n += 1
 
+        return drinks
+
     def makeDrink(self, ingredients):
-        self.running = True
         pumpThreads = []
         for ing in ingredients.keys():
             for p in self.pump_configuration.keys():
@@ -72,41 +68,35 @@ class Bartender:
                     waitTime = ingredients[ing] * FLOW_RATE
                     pump_thread = threading.Thread(target=self.pourDrink, args=(self.pump_configuration[p]['pin'], waitTime))
                     pumpThreads.append(pump_thread)
-
         #Start the pump threads
         for threads in pumpThreads:
             threads.start()
         #Wait for threads to finish
         for threads in pumpThreads:
             threads.join()
-
-        time.sleep(2)
-        self.running = False
+        time.sleep(1)
 
     def pourDrink(self, pin, pourTime):
-        GPIO.output(pin, GRIO.LOW)
+        print("The pin " + str(pin) + " pours " + str(pourTime))
+        GPIO.output(pin, GPIO.LOW)
         time.sleep(pourTime)
         GPIO.output(pin, GPIO.HIGH)
 
     def clean(self):
         cleanTime = 20
         pumpThreads = []
-        self.running = True
         for p in self.pump_configuration.keys():
             if self.pump_configuration[p]['value'] is not None:
                 pump_thread = threading.Thread(target=self.pourDrink, args=(self.pump_configuration[p]['pin'], cleanTime))
                 pumpThreads.append(pump_thread)
 
-        for threads in pumpThreads:
-            threads.start()
+        for thread in pumpThreads:
+            thread.start()
 
-        for threads in pumpThreads:
-            threads.join()
+        for thread in pumpThreads:
+            thread.join()
 
         time.sleep(2)
-        self.running = False
 
-
-if __name__ == '__main__':
-    bartender = Bartender()
-    bartender.filterDrinks()
+    def quit(self):
+        GPIO.cleanup()

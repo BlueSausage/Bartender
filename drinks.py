@@ -23,22 +23,26 @@ drink_list = [
             "orange": 30
         }
     }, {
-        "name": "Screwdriver",
+        "name": "Vodka O",
         "ingredients": {
             "vodka": 50,
             "orange": 150
         }
     }, {
-        "name": "Gin & Juice",
+        "name": "Gin & Orange",
         "ingredients": {
             "gin": 50,
             "orange": 150
         }
     }, {
-        "name": "Tequila Sunrise",
+        "name": "Test",
         "ingredients": {
-            "gin": 50,
-            "orange": 150
+            "gin": 15,
+            "rum": 15,
+            "vodka": 15,
+            "tequila": 15,
+            "coke": 15,
+            "orange": 15
         }
     }
 ]
